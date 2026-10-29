@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { calcBalances, formatSettlementText, settle, splitAmount } from './settle'
-import type { State } from './types'
+import { calcBalances, formatSettlementText, settle, splitAmount, summarize, transferKey } from './settle'
+import type { EventData, Ledger } from './types'
 
 const members = ['a', 'b', 'c', 'd'].map((id) => ({ id, name: id.toUpperCase() }))
 const all = members.map((m) => m.id)
 
-function applyTransfers(state: State) {
+function applyTransfers(state: Ledger) {
   const balances = calcBalances(state)
   const transfers = settle(balances)
   const after = new Map(balances.map((b) => [b.memberId, b.balance]))
@@ -28,8 +28,7 @@ describe('splitAmount', () => {
 
 describe('calcBalances', () => {
   it('一部参加の支払いを反映し、収支の合計が 0 になる', () => {
-    const state: State = {
-      version: 1,
+    const state: Ledger = {
       members,
       expenses: [
         { id: '1', title: 'ホテル', amount: 40000, payerId: 'a', participantIds: all },
@@ -41,8 +40,7 @@ describe('calcBalances', () => {
     expect(balances.reduce((s, b) => s + b.balance, 0)).toBe(0)
   })
   it('削除済みメンバーの id は無視する', () => {
-    const state: State = {
-      version: 1,
+    const state: Ledger = {
       members,
       expenses: [{ id: '1', title: 'x', amount: 900, payerId: 'zz', participantIds: all }],
     }
@@ -52,8 +50,7 @@ describe('calcBalances', () => {
 
 describe('settle', () => {
   it('精算どおりに送金すると全員 0 になり、回数は n-1 以下', () => {
-    const state: State = {
-      version: 1,
+    const state: Ledger = {
       members,
       expenses: [
         { id: '1', title: 'ホテル', amount: 48000, payerId: 'a', participantIds: all },
@@ -69,18 +66,59 @@ describe('settle', () => {
     expect(transfers.every((t) => t.amount > 0)).toBe(true)
   })
   it('全員の収支が 0 なら送金なし', () => {
-    expect(settle(calcBalances({ version: 1, members, expenses: [] }))).toEqual([])
+    expect(settle(calcBalances({ members, expenses: [] }))).toEqual([])
   })
 })
 
 describe('formatSettlementText', () => {
   it('名前と金額を含むテキストを作る', () => {
-    const state: State = {
-      version: 1,
+    const state: Ledger = {
       members: members.slice(0, 2),
       expenses: [{ id: '1', title: '昼食', amount: 2000, payerId: 'a', participantIds: ['a', 'b'] }],
     }
     const text = formatSettlementText(state, settle(calcBalances(state)))
     expect(text).toBe('【精算結果】合計 ¥2,000\nB → A：¥1,000')
+  })
+})
+
+describe('formatSettlementText（イベント名つき）', () => {
+  it('イベント名を見出しに入れる', () => {
+    const ledger: Ledger = {
+      members: members.slice(0, 2),
+      expenses: [{ id: '1', title: '昼食', amount: 2000, payerId: 'a', participantIds: ['a', 'b'] }],
+    }
+    const text = formatSettlementText({ ...ledger, name: '沖縄旅行' }, settle(calcBalances(ledger)))
+    expect(text.split('\n')[0]).toBe('【沖縄旅行の精算】合計 ¥2,000')
+  })
+})
+
+describe('summarize', () => {
+  const base: EventData = {
+    id: 'ev',
+    name: '旅行',
+    createdAt: 0,
+    members: members.slice(0, 3),
+    expenses: [{ id: '1', title: '宿', amount: 9000, payerId: 'a', participantIds: ['a', 'b', 'c'] }],
+    settled: [],
+  }
+
+  it('精算済みの数と完了状態を出す', () => {
+    const s = summarize(base)
+    expect(s.total).toBe(9000)
+    expect(s.transfers).toHaveLength(2)
+    expect(s.done).toBe(false)
+    const all = summarize({ ...base, settled: s.transfers.map(transferKey) })
+    expect(all.settledCount).toBe(2)
+    expect(all.done).toBe(true)
+  })
+
+  it('支払いが変わって送金額が変わると、精算済みは数えない', () => {
+    const settled = summarize(base).transfers.map(transferKey)
+    const changed = { ...base, settled, expenses: [{ ...base.expenses[0], amount: 12000 }] }
+    expect(summarize(changed).settledCount).toBe(0)
+  })
+
+  it('支払いがなければ完了扱いにしない', () => {
+    expect(summarize({ ...base, expenses: [] }).done).toBe(false)
   })
 })
