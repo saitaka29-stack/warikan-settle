@@ -1,35 +1,29 @@
 import { useEffect, useReducer } from 'react'
-import { ExpenseSection } from './components/ExpenseSection'
-import { MemberSection } from './components/MemberSection'
-import { ResultSection } from './components/ResultSection'
+import { loadStore, saveStore } from './lib/storage'
 import { reducer } from './lib/reducer'
-import { loadSaved, save, stateFromHash } from './lib/storage'
-import { emptyState, type State } from './lib/types'
-
-// 共有 URL → 保存データ → 空 の順で初期状態を決める
-function init(): State {
-  const shared = stateFromHash(location.hash)
-  if (shared) {
-    history.replaceState(null, '', location.pathname + location.search)
-    return shared
-  }
-  return loadSaved() ?? emptyState()
-}
+import { EventPage } from './pages/EventPage'
+import { SharePage } from './pages/SharePage'
+import { TopPage } from './pages/TopPage'
+import { navigate, useRoute } from './router'
 
 export default function App() {
-  const [state, dispatch] = useReducer(reducer, undefined, init)
+  const [store, dispatch] = useReducer(reducer, undefined, loadStore)
+  const route = useRoute()
+  const event = route.page === 'event' ? store.events.find((e) => e.id === route.id) : undefined
+  const missing = route.page === 'notFound' || (route.page === 'event' && !event)
 
-  useEffect(() => save(state), [state])
+  useEffect(() => saveStore(store), [store])
+
+  // 存在しない URL・削除済みイベントはトップへ
+  useEffect(() => {
+    if (missing) navigate('/', { replace: true })
+  }, [missing])
 
   return (
     <main className="container">
-      <header className="app-header">
-        <h1>ワリカンスッキリ</h1>
-        <p>立て替えを入力するだけで、最小限の送金回数で精算</p>
-      </header>
-      <MemberSection state={state} dispatch={dispatch} />
-      <ExpenseSection state={state} dispatch={dispatch} />
-      <ResultSection state={state} dispatch={dispatch} />
+      {route.page === 'top' && <TopPage store={store} dispatch={dispatch} />}
+      {route.page === 'event' && event && <EventPage key={event.id} event={event} tab={route.tab} dispatch={dispatch} />}
+      {route.page === 'share' && <SharePage store={store} dispatch={dispatch} />}
       <footer className="app-footer">データはこの端末のブラウザ内にのみ保存されます</footer>
     </main>
   )
