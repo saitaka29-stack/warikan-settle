@@ -4,7 +4,7 @@
 旅行や飲み会で立て替えた支払いを入力するだけで、**「誰 → 誰：いくら」払えば精算が終わるか** を出す Web アプリです。
 ログイン不要・インストール不要で、スマホのブラウザからすぐ使えます。
 
-- 公開 URL：https://YOUR-VERCEL-URL.vercel.app
+- 公開 URL：https://warikan-settle.vercel.app
 - GitHub：https://github.com/saitaka29-stack/warikan-settle
 
 | トップ | 精算（幹事） | 共有ビュー（参加者） |
@@ -136,5 +136,5 @@ Playwright で「イベント作成 → メンバー 4 人 → 支払い 5 件�
 お金の計算という間違えられない部分をテストで守りながら、機能を広げられました。
 
 ## リンク
-- 公開 URL：https://YOUR-VERCEL-URL.vercel.app
+- 公開 URL：https://warikan-settle.vercel.app
 - GitHub：https://github.com/saitaka29-stack/warikan-settle
