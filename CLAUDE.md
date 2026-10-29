@@ -2,6 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 応答言語
+- ユーザーへの返答・説明・質問は**すべて日本語**で書く（英語で返さない）。コミットメッセージ・ドキュメントも日本語。
+
 ## プロジェクト概要
 割り勘精算アプリ「ワリカンスッキリ」。旅行・飲み会で複数人が立て替えた支払いを入力すると、
 最小限の送金回数で清算できる「誰 → 誰：いくら」のリストを出す。
